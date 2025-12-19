@@ -112,20 +112,5 @@ export interface ApiResponse<T> {
 
 export interface PaginatedResponse<T> {
   success: boolean;
-  data: {
-    [key: string]:
-      | T[]
-      | {
-          page: number;
-          limit: number;
-          total: number;
-          pages: number;
-        };
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      pages: number;
-    };
-  };
+  data: any; // Using any to avoid index signature conflicts with pagination property
 }
