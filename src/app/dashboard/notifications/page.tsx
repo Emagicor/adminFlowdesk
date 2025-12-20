@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/ui';
 import { Bell, Plus, Trash2, Check } from 'lucide-react';
 import { useCustomer } from '@/context';
-import { notificationsApi } from '@/lib/api';
+import { notificationsApi, projectsApi, phasesApi } from '@/lib/api';
 import { formatDate, getRelativeTime } from '@/lib/utils';
 
 export default function NotificationsPage() {
@@ -150,22 +150,69 @@ export default function NotificationsPage() {
 
 function CreateNotificationModal({ customerId, onClose, onCreated }: any) {
   const [isCreating, setIsCreating] = useState(false);
+  const [phases, setPhases] = useState<any[]>([]);
+  const [isLoadingPhases, setIsLoadingPhases] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
     message: '',
     channel: 'in_app',
     priority: 'medium',
     phase_id: '',
-    project_id: '',
   });
+
+  useEffect(() => {
+    loadPhases();
+  }, [customerId]);
+
+  const loadPhases = async () => {
+    try {
+      setIsLoadingPhases(true);
+      // First get all projects for this customer
+      const projectsRes = await projectsApi.list(1, 100, customerId);
+      const allProjects = projectsRes.data?.projects || [];
+      
+      // Filter by customer
+      const customerProjects = allProjects.filter((project: any) => {
+        const pid = typeof project.customer_id === 'object' ? project.customer_id._id : project.customer_id;
+        return pid === customerId;
+      });
+
+      // Get all phases for all projects
+      const allPhases: any[] = [];
+      for (const project of customerProjects) {
+        try {
+          const phasesRes = await phasesApi.listByProject(project._id);
+          const projectPhases = (phasesRes.data?.phases || []).map((phase: any) => ({
+            ...phase,
+            projectName: project.project_type || 'Unnamed Project'
+          }));
+          allPhases.push(...projectPhases);
+        } catch (e) {
+          console.error('Failed to load phases for project:', project._id);
+        }
+      }
+      
+      setPhases(allPhases);
+    } catch (error) {
+      console.error('Failed to load phases:', error);
+    } finally {
+      setIsLoadingPhases(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsCreating(true);
+      
+      // Find the selected phase to get project_id
+      const selectedPhase = phases.find(p => p._id === formData.phase_id);
+      
       await notificationsApi.create({
         customer_id: customerId,
         ...formData,
+        project_id: selectedPhase?.project_id || undefined,
+        phase_id: formData.phase_id || undefined,
       });
       onCreated();
     } catch (e) { console.error(e); } finally { setIsCreating(false); }
@@ -213,19 +260,27 @@ function CreateNotificationModal({ customerId, onClose, onCreated }: any) {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Project ID (Optional)</label>
-                <input value={formData.project_id} onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
-                  placeholder="Enter project ID"
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Phase ID (Optional)</label>
-                <input value={formData.phase_id} onChange={(e) => setFormData({ ...formData, phase_id: e.target.value })}
-                  placeholder="Enter phase ID"
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Phase (Optional)</label>
+              {isLoadingPhases ? (
+                <div className="w-full h-10 px-3 rounded-lg border border-input bg-muted animate-pulse" />
+              ) : (
+                <select 
+                  value={formData.phase_id} 
+                  onChange={(e) => setFormData({ ...formData, phase_id: e.target.value })}
+                  className="w-full h-10 px-3 rounded-lg border border-input bg-background"
+                >
+                  <option value="">-- Select Phase (Optional) --</option>
+                  {phases.map((phase) => (
+                    <option key={phase._id} value={phase._id}>
+                      {phase.projectName} - {phase.name || `Phase ${phase.order}`} ({phase.status})
+                    </option>
+                  ))}
+                </select>
+              )}
+              {!isLoadingPhases && phases.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">No phases available for this customer</p>
+              )}
             </div>
             
             <div className="flex justify-end gap-3">
