@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/u
 import { Bell, Plus, Trash2, Check } from 'lucide-react';
 import { useCustomer } from '@/context';
 import { notificationsApi } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDate, getRelativeTime } from '@/lib/utils';
 
 export default function NotificationsPage() {
   const { selectedCustomer } = useCustomer();
@@ -55,6 +55,16 @@ export default function NotificationsPage() {
     }
   };
 
+  const getPhaseColor = (phase: string) => {
+    switch (phase?.toLowerCase()) {
+      case 'pending': return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+      case 'in_progress': return 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300';
+      case 'completed': return 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300';
+      case 'on_hold': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300';
+      default: return 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -94,12 +104,17 @@ export default function NotificationsPage() {
                       <h3 className="font-medium text-foreground">{notif.title}</h3>
                     )}
                     <p className="text-muted-foreground">{notif.message}</p>
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${getPriorityColor(notif.priority)}`}>
                         {notif.priority}
                       </span>
+                      {notif.phase_id && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${getPhaseColor(notif.phase_id.status || 'unknown')}`}>
+                          {notif.phase_id.name || `Phase ${notif.phase_id.order}`}
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">{notif.channel}</span>
-                      <span className="text-xs text-muted-foreground">{formatDate(notif.createdAt)}</span>
+                      <span className="text-xs text-muted-foreground font-medium">{getRelativeTime(notif.sent_at || notif.createdAt)}</span>
                       {notif.read && (
                         <span className="text-xs text-green-600">✓ Read</span>
                       )}
@@ -140,6 +155,8 @@ function CreateNotificationModal({ customerId, onClose, onCreated }: any) {
     message: '',
     channel: 'in_app',
     priority: 'medium',
+    phase_id: '',
+    project_id: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,6 +210,21 @@ function CreateNotificationModal({ customerId, onClose, onCreated }: any) {
                   <option value="high">High</option>
                   <option value="urgent">Urgent</option>
                 </select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Project ID (Optional)</label>
+                <input value={formData.project_id} onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
+                  placeholder="Enter project ID"
+                  className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Phase ID (Optional)</label>
+                <input value={formData.phase_id} onChange={(e) => setFormData({ ...formData, phase_id: e.target.value })}
+                  placeholder="Enter phase ID"
+                  className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
               </div>
             </div>
             
