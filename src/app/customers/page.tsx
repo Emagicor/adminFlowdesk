@@ -28,6 +28,8 @@ export default function CustomerSelectPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Only render theme toggle after client-side hydration
   useEffect(() => {
@@ -72,6 +74,20 @@ export default function CustomerSelectPage() {
       customer_type: customer.customer_type,
     });
     router.push('/dashboard');
+  };
+
+  const handleCreateCustomer = async (formData: any) => {
+    try {
+      setIsCreating(true);
+      await customersApi.create(formData);
+      setShowCreateModal(false);
+      loadCustomers(); // Refresh list
+    } catch (error: any) {
+      console.error('Failed to create customer:', error);
+      alert(error.message || 'Failed to create customer');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -158,7 +174,7 @@ export default function CustomerSelectPage() {
 
         {/* Add Customer Button */}
         <div className="flex justify-center mb-8">
-          <Button onClick={() => router.push('/customers/new')} variant="outline">
+          <Button onClick={() => setShowCreateModal(true)} variant="outline">
             <Plus className="w-4 h-4 mr-2" />
             Add New Customer
           </Button>
@@ -234,7 +250,162 @@ export default function CustomerSelectPage() {
             ))}
           </div>
         )}
+
+        {/* Create Customer Modal */}
+        {showCreateModal && <CreateCustomerModal onClose={() => setShowCreateModal(false)} onCreate={handleCreateCustomer} isLoading={isCreating} />}
       </main>
+    </div>
+  );
+}
+
+// Create Customer Modal Component
+function CreateCustomerModal({ onClose, onCreate, isLoading }: { onClose: () => void; onCreate: (data: any) => void; isLoading: boolean }) {
+  const [formData, setFormData] = useState({
+    email: '',
+    name: '',
+    phone: '',
+    alternate_phone_numbers: '',
+    city: '',
+    customer_type: 'B2C',
+    customer_remarks: '',
+    internal_notes: ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Convert alternate_phone_numbers from comma-separated string to array
+    const data = {
+      ...formData,
+      alternate_phone_numbers: formData.alternate_phone_numbers
+        ? formData.alternate_phone_numbers.split(',').map(p => p.trim()).filter(Boolean)
+        : []
+    };
+    
+    onCreate(data);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-border">
+          <h2 className="text-2xl font-bold">Add New Customer</h2>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Email *</label>
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="john.doe@example.com"
+              />
+            </div>
+
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Name *</label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="John Doe"
+              />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Phone</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="+91-9876543210"
+              />
+            </div>
+
+            {/* City */}
+            <div>
+              <label className="block text-sm font-medium mb-2">City</label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Mumbai"
+              />
+            </div>
+
+            {/* Customer Type */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Customer Type</label>
+              <select
+                value={formData.customer_type}
+                onChange={(e) => setFormData({ ...formData, customer_type: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="B2C">B2C</option>
+                <option value="B2B">B2B</option>
+              </select>
+            </div>
+
+            {/* Alternate Phone Numbers */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Alternate Phones</label>
+              <input
+                type="text"
+                value={formData.alternate_phone_numbers}
+                onChange={(e) => setFormData({ ...formData, alternate_phone_numbers: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="+91-9123456780, +91-9876543211"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Comma-separated</p>
+            </div>
+          </div>
+
+          {/* Customer Remarks */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Customer Remarks</label>
+            <textarea
+              value={formData.customer_remarks}
+              onChange={(e) => setFormData({ ...formData, customer_remarks: e.target.value })}
+              className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              rows={2}
+              placeholder="Premium customer, referred by partner"
+            />
+          </div>
+
+          {/* Internal Notes */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Internal Notes</label>
+            <textarea
+              value={formData.internal_notes}
+              onChange={(e) => setFormData({ ...formData, internal_notes: e.target.value })}
+              className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              rows={2}
+              placeholder="High priority, needs quick turnaround"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 justify-end pt-4 border-t border-border">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Customer'}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
