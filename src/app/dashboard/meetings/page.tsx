@@ -122,6 +122,27 @@ export default function MeetingsPage() {
 
 function MeetingCard({ meeting, onDelete }: any) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleToggleActionItem = async (itemIndex: number) => {
+    try {
+      setIsUpdating(true);
+      const updatedActionItems = meeting.action_items.map((item: any, i: number) =>
+        i === itemIndex ? { ...item, completed: !item.completed } : item
+      );
+
+      await meetingsApi.update(meeting._id, {
+        action_items: updatedActionItems
+      });
+
+      // Update local state
+      meeting.action_items = updatedActionItems;
+      setIsUpdating(false);
+    } catch (error) {
+      console.error('Failed to update action item:', error);
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <Card>
@@ -178,7 +199,11 @@ function MeetingCard({ meeting, onDelete }: any) {
                     <p className="text-sm font-medium mb-2">✅ Action Items ({meeting.action_items.length})</p>
                     <ul className="space-y-2">
                       {meeting.action_items.map((item: any, i: number) => (
-                        <li key={i} className="flex items-start gap-2 p-2 rounded-lg border border-border">
+                        <li 
+                          key={i} 
+                          className="flex items-start gap-2 p-2 rounded-lg border border-border hover:bg-accent/50 transition-colors cursor-pointer"
+                          onClick={() => !isUpdating && handleToggleActionItem(i)}
+                        >
                           {item.completed ? (
                             <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
                           ) : (
