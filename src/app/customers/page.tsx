@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, Button } from '@/components/ui';
-import { Users, Plus, Search, ChevronRight, Mail, Phone, Building2, Sun, Moon } from 'lucide-react';
+import { Users, Plus, Search, ChevronRight, Mail, Phone, Building2, Sun, Moon, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useAuth, useCustomer } from '@/context';
@@ -30,6 +30,9 @@ export default function CustomerSelectPage() {
   const [mounted, setMounted] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Only render theme toggle after client-side hydration
   useEffect(() => {
@@ -88,6 +91,28 @@ export default function CustomerSelectPage() {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleEditCustomer = async (formData: any) => {
+    if (!editingCustomer) return;
+    try {
+      setIsUpdating(true);
+      await customersApi.update(editingCustomer._id, formData);
+      setShowEditModal(false);
+      setEditingCustomer(null);
+      loadCustomers(); // Refresh list
+    } catch (error: any) {
+      console.error('Failed to update customer:', error);
+      alert(error.message || 'Failed to update customer');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleEditClick = (e: React.MouseEvent, customer: Customer) => {
+    e.stopPropagation(); // Prevent card click
+    setEditingCustomer(customer);
+    setShowEditModal(true);
   };
 
   const getTypeColor = (type: string) => {
@@ -224,7 +249,16 @@ export default function CustomerSelectPage() {
                         </span>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => handleEditClick(e, customer)}
+                        className="p-2 rounded-lg hover:bg-accent transition-colors"
+                        title="Edit customer"
+                      >
+                        <Pencil className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                      </button>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
                   </div>
                   
                   <div className="space-y-1.5 text-sm text-muted-foreground">
@@ -253,6 +287,16 @@ export default function CustomerSelectPage() {
 
         {/* Create Customer Modal */}
         {showCreateModal && <CreateCustomerModal onClose={() => setShowCreateModal(false)} onCreate={handleCreateCustomer} isLoading={isCreating} />}
+        
+        {/* Edit Customer Modal */}
+        {showEditModal && editingCustomer && (
+          <EditCustomerModal
+            customer={editingCustomer}
+            onClose={() => { setShowEditModal(false); setEditingCustomer(null); }}
+            onUpdate={handleEditCustomer}
+            isLoading={isUpdating}
+          />
+        )}
       </main>
     </div>
   );
@@ -402,6 +446,157 @@ function CreateCustomerModal({ onClose, onCreate, isLoading }: { onClose: () => 
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading ? 'Creating...' : 'Create Customer'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Edit Customer Modal Component
+function EditCustomerModal({ customer, onClose, onUpdate, isLoading }: { customer: Customer; onClose: () => void; onUpdate: (data: any) => void; isLoading: boolean }) {
+  const [formData, setFormData] = useState({
+    name: customer.name || '',
+    phone: customer.phone || '',
+    alternate_phone_numbers: '',
+    city: customer.city || '',
+    customer_type: customer.customer_type || 'B2C',
+    customer_remarks: '',
+    internal_notes: ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Convert alternate_phone_numbers from comma-separated string to array
+    const data: any = {
+      name: formData.name,
+      phone: formData.phone,
+      city: formData.city,
+      customer_type: formData.customer_type,
+    };
+    
+    if (formData.alternate_phone_numbers) {
+      data.alternate_phone_numbers = formData.alternate_phone_numbers.split(',').map(p => p.trim()).filter(Boolean);
+    }
+    
+    if (formData.customer_remarks) {
+      data.customer_remarks = formData.customer_remarks;
+    }
+    
+    if (formData.internal_notes) {
+      data.internal_notes = formData.internal_notes;
+    }
+    
+    onUpdate(data);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-border">
+          <h2 className="text-2xl font-bold">Edit Customer</h2>
+          <p className="text-sm text-muted-foreground mt-1">{customer.email}</p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Name *</label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="John Doe"
+              />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Phone</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="+91-9876543210"
+              />
+            </div>
+
+            {/* City */}
+            <div>
+              <label className="block text-sm font-medium mb-2">City</label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Mumbai"
+              />
+            </div>
+
+            {/* Customer Type */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Customer Type</label>
+              <select
+                value={formData.customer_type}
+                onChange={(e) => setFormData({ ...formData, customer_type: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="B2C">B2C</option>
+                <option value="B2B">B2B</option>
+              </select>
+            </div>
+
+            {/* Alternate Phone Numbers */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Alternate Phones</label>
+              <input
+                type="text"
+                value={formData.alternate_phone_numbers}
+                onChange={(e) => setFormData({ ...formData, alternate_phone_numbers: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="+91-9123456780, +91-9876543211"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Comma-separated</p>
+            </div>
+          </div>
+
+          {/* Customer Remarks */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Customer Remarks</label>
+            <textarea
+              value={formData.customer_remarks}
+              onChange={(e) => setFormData({ ...formData, customer_remarks: e.target.value })}
+              className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              rows={2}
+              placeholder="Premium customer, referred by partner"
+            />
+          </div>
+
+          {/* Internal Notes */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Internal Notes</label>
+            <textarea
+              value={formData.internal_notes}
+              onChange={(e) => setFormData({ ...formData, internal_notes: e.target.value })}
+              className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              rows={2}
+              placeholder="High priority, needs quick turnaround"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 justify-end pt-4 border-t border-border">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Updating...' : 'Update Customer'}
             </Button>
           </div>
         </form>
