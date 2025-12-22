@@ -12,7 +12,8 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  ArrowLeftCircle
+  ArrowLeftCircle,
+  Users
 } from 'lucide-react';
 import { useAuth, useCustomer } from '@/context';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ import { useTheme } from 'next-themes';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/projects', label: 'Projects', icon: FolderKanban },
+  { href: '/dashboard/crew', label: 'Crew', icon: Users },
   { href: '/dashboard/documents', label: 'Documents', icon: FileText },
   { href: '/dashboard/meetings', label: 'Meetings', icon: CalendarDays },
   { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },

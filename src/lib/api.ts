@@ -364,4 +364,39 @@ export const notificationsApi = {
     }),
 };
 
+// Crew API (Phase Contacts)
+export const crewApi = {
+  // Get all crew for a project
+  listByProject: (projectId: string) =>
+    apiRequest<any>(`/projects/${projectId}/crew`),
+
+  // Get all crew for a phase
+  listByPhase: (phaseId: string) => apiRequest<any>(`/phases/${phaseId}/crew`),
+
+  // Get crew member by ID
+  getById: (id: string) => apiRequest<any>(`/crew/${id}`),
+
+  // Add crew member to a phase
+  create: (phaseId: string, data: any) =>
+    apiRequest<any>(`/phases/${phaseId}/crew`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  // Update crew member
+  update: (id: string, data: any) =>
+    apiRequest<any>(`/crew/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  // Delete crew member
+  delete: (id: string) =>
+    apiRequest<any>(`/crew/${id}`, {
+      method: "DELETE",
+    }),
+};
+
 export default apiRequest;
