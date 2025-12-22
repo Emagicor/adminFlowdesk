@@ -287,8 +287,10 @@ export const documentsApi = {
 
 // Meetings API
 export const meetingsApi = {
-  listByProject: (projectId: string) =>
-    apiRequest<any>(`/projects/${projectId}/meetings`),
+  listByProject: (projectId: string, page = 1, limit = 20) =>
+    apiRequest<any>(
+      `/projects/${projectId}/meetings?page=${page}&limit=${limit}`
+    ),
 
   getById: (id: string) => apiRequest<any>(`/meetings/${id}`),
 

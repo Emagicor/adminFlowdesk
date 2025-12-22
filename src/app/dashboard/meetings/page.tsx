@@ -25,12 +25,16 @@ export default function MeetingsPage() {
   const [phases, setPhases] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalMeetings, setTotalMeetings] = useState(0);
+  const limit = 20;
 
   useEffect(() => {
     if (selectedCustomer) {
       loadData();
     }
-  }, [selectedCustomer]);
+  }, [selectedCustomer, page]);
 
   const loadData = async () => {
     try {
@@ -42,6 +46,7 @@ export default function MeetingsPage() {
 
       const allPhases: any[] = [];
       const allMeetings: any[] = [];
+      let combinedTotal = 0;
       
       for (const project of customerProjects) {
         try {
@@ -49,14 +54,21 @@ export default function MeetingsPage() {
           const projectPhases = phasesRes.data?.phases || [];
           allPhases.push(...projectPhases.map((p: any) => ({ ...p, projectId: project._id })));
           
-          const meetingsRes = await meetingsApi.listByProject(project._id);
+          const meetingsRes = await meetingsApi.listByProject(project._id, page, limit);
           const meetings = meetingsRes.data?.meetings || [];
           allMeetings.push(...meetings.map((m: any) => ({ ...m, projectType: project.project_type })));
+          
+          // Accumulate total from pagination
+          if (meetingsRes.data?.pagination) {
+            combinedTotal += meetingsRes.data.pagination.total;
+          }
         } catch (e) {}
       }
       
       setPhases(allPhases);
       setMeetings(allMeetings);
+      setTotalMeetings(combinedTotal);
+      setTotalPages(Math.ceil(combinedTotal / limit));
     } catch (error) {
       console.error('Failed to load meetings:', error);
     } finally {
@@ -108,12 +120,35 @@ export default function MeetingsPage() {
         </div>
       )}
 
+      {/* Pagination Controls */}
+      {!isLoading && meetings.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-4 mt-6">
+          <Button
+            variant="outline"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages} ({totalMeetings} total meetings)
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       {showCreateModal && (
         <CreateMeetingModal
           projects={projects}
           phases={phases}
           onClose={() => setShowCreateModal(false)}
-          onCreated={() => { setShowCreateModal(false); loadData(); }}
+          onCreated={() => { setShowCreateModal(false); setPage(1); loadData(); }}
         />
       )}
     </div>

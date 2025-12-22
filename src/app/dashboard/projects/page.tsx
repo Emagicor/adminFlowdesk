@@ -32,25 +32,9 @@ export default function ProjectsPage() {
   const loadProjects = async () => {
     try {
       setIsLoading(true);
-      console.log('📁 [Projects Page] Loading projects for customer:', selectedCustomer);
       const response = await projectsApi.list(1, 100, selectedCustomer?._id);
-      console.log('📁 [Projects Page] Received projects from backend:', response.data?.projects);
-      
-      // WORKAROUND: Backend is not filtering by customer_id, so we filter client-side
-      const allProjects = response.data?.projects || [];
-      const filteredProjects = allProjects.filter((project: any) => {
-        // Check if project.customer_id is an object or string
-        const projectCustomerId = typeof project.customer_id === 'object' 
-          ? project.customer_id._id 
-          : project.customer_id;
-        
-        const match = projectCustomerId === selectedCustomer?._id;
-        console.log(`📁 Project "${project.project_type}" - customer_id: ${projectCustomerId}, selected: ${selectedCustomer?._id}, match: ${match}`);
-        return match;
-      });
-      
-      console.log('📁 [Projects Page] Filtered projects for current customer:', filteredProjects);
-      setProjects(filteredProjects);
+      const projects = response.data?.projects || [];
+      setProjects(projects);
     } catch (error) {
       console.error('Failed to load projects:', error);
     } finally {
