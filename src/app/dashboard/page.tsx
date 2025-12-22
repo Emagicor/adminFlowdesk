@@ -23,9 +23,11 @@ export default function DashboardPage() {
     try {
       setIsLoading(true);
       
+      // Try backend filtering first, then client-side filter as safety
       const projectsRes = await projectsApi.list(1, 100, selectedCustomer?._id);
       const allProjects = projectsRes.data?.projects || [];
       
+      // Client-side filter to ensure only selected customer's projects
       const customerProjects = allProjects.filter((project: any) => {
         const pid = typeof project.customer_id === 'object' ? project.customer_id._id : project.customer_id;
         return pid === selectedCustomer?._id;

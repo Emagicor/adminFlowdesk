@@ -33,8 +33,15 @@ export default function ProjectsPage() {
     try {
       setIsLoading(true);
       const response = await projectsApi.list(1, 100, selectedCustomer?._id);
-      const projects = response.data?.projects || [];
-      setProjects(projects);
+      const allProjects = response.data?.projects || [];
+      
+      // Client-side filter to ensure only selected customer's projects
+      const customerProjects = allProjects.filter((project: any) => {
+        const pid = typeof project.customer_id === 'object' ? project.customer_id._id : project.customer_id;
+        return pid === selectedCustomer?._id;
+      });
+      
+      setProjects(customerProjects);
     } catch (error) {
       console.error('Failed to load projects:', error);
     } finally {
