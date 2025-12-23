@@ -15,6 +15,8 @@ export default function CrewPage() {
   const [selectedPhase, setSelectedPhase] = useState<string>('NA');
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCrew, setEditingCrew] = useState<any>(null);
 
   useEffect(() => {
     if (selectedCustomer) {
@@ -104,6 +106,23 @@ export default function CrewPage() {
     } catch (error) {
       console.error('Failed to delete crew member:', error);
       alert('Failed to delete crew member');
+    }
+  };
+
+  const handleEditClick = (member: any) => {
+    setEditingCrew(member);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateCrew = async (id: string, data: any) => {
+    try {
+      await crewApi.update(id, data);
+      setShowEditModal(false);
+      setEditingCrew(null);
+      loadCrew();
+    } catch (error: any) {
+      console.error('Failed to update crew member:', error);
+      alert(error.message || 'Failed to update crew member');
     }
   };
 
@@ -240,13 +259,22 @@ export default function CrewPage() {
                         </span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteCrew(member._id)}
-                      className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
-                      title="Delete crew member"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditClick(member)}
+                        className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors"
+                        title="Edit crew member"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCrew(member._id)}
+                        className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
+                        title="Delete crew member"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {member.phase_id && (
@@ -285,6 +313,19 @@ export default function CrewPage() {
               setShowCreateModal(false);
               loadCrew();
             }}
+          />
+        )}
+
+        {/* Edit Crew Modal */}
+        {showEditModal && editingCrew && (
+          <EditCrewModal
+            crew={editingCrew}
+            phases={phases}
+            onClose={() => {
+              setShowEditModal(false);
+              setEditingCrew(null);
+            }}
+            onUpdate={handleUpdateCrew}
           />
         )}
       </div>
@@ -396,11 +437,8 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
                 value={formData.contact_role}
                 onChange={(e) => setFormData({ ...formData, contact_role: e.target.value })}
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="e.g., Designer, Travel Agent, Manufacturer"
+                placeholder="Enter role"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Examples: Designer, Travel Agent, Visa Agent, Hotel, Manufacturer, Shipping Agent, Customs Agent
-              </p>
             </div>
 
             {/* Phone */}
@@ -435,6 +473,115 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
             </Button>
             <Button type="submit" disabled={isCreating}>
               {isCreating ? 'Adding...' : 'Add Crew Member'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Edit Crew Modal Component
+function EditCrewModal({ crew, phases, onClose, onUpdate }: any) {
+  const [formData, setFormData] = useState({
+    contact_name: crew.contact_name || '',
+    contact_role: crew.contact_role || '',
+    contact_phone: crew.contact_phone || '',
+    contact_email: crew.contact_email || '',
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      setIsUpdating(true);
+      await onUpdate(crew._id, {
+        contact_name: formData.contact_name,
+        contact_role: formData.contact_role,
+        contact_phone: formData.contact_phone || undefined,
+        contact_email: formData.contact_email || undefined,
+      });
+    } catch (error: any) {
+      console.error('Failed to update crew member:', error);
+      alert(error.message || 'Failed to update crew member');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-border">
+          <h2 className="text-2xl font-bold">Edit Crew Member</h2>
+          {crew.phase_id && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Phase: {crew.phase_id.name}
+            </p>
+          )}
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Name *</label>
+              <input
+                type="text"
+                required
+                value={formData.contact_name}
+                onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="John Designer"
+              />
+            </div>
+
+            {/* Role */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Role *</label>
+              <input
+                type="text"
+                required
+                value={formData.contact_role}
+                onChange={(e) => setFormData({ ...formData, contact_role: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Enter role"
+              />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Phone</label>
+              <input
+                type="tel"
+                value={formData.contact_phone}
+                onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="+91 98765 43210"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Email</label>
+              <input
+                type="email"
+                value={formData.contact_email}
+                onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="john@designstudio.com"
+              />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 justify-end pt-4 border-t border-border">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isUpdating}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? 'Updating...' : 'Update Crew Member'}
             </Button>
           </div>
         </form>
