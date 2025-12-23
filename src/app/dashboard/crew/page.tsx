@@ -372,7 +372,7 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
       // Convert comma-separated roles to array
       const rolesArray = formData.contact_role
         .split(',')
-        .map(role => role.trim())
+        .map((role: string) => role.trim())
         .filter(Boolean);
       
       if (rolesArray.length === 0) {
@@ -529,7 +529,7 @@ function EditCrewModal({ crew, phases, onClose, onUpdate }: any) {
       // Convert comma-separated roles to array
       const rolesArray = formData.contact_role
         .split(',')
-        .map(role => role.trim())
+        .map((role: string) => role.trim())
         .filter(Boolean);
       
       if (rolesArray.length === 0) {
