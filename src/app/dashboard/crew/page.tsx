@@ -6,17 +6,6 @@ import { Users, Plus, Trash2, Pencil, Phone, Mail, Briefcase } from 'lucide-reac
 import { useCustomer } from '@/context';
 import { projectsApi, phasesApi, crewApi } from '@/lib/api';
 
-const CONTACT_ROLES = [
-  { value: 'designer', label: 'Designer' },
-  { value: 'travel_agent', label: 'Travel Agent' },
-  { value: 'visa_agent', label: 'Visa Agent' },
-  { value: 'hotel', label: 'Hotel' },
-  { value: 'manufacturer', label: 'Manufacturer' },
-  { value: 'shipping_agent', label: 'Shipping Agent' },
-  { value: 'customs_agent', label: 'Customs Agent' },
-  { value: 'other', label: 'Other' },
-];
-
 export default function CrewPage() {
   const { selectedCustomer } = useCustomer();
   const [crew, setCrew] = useState<any[]>([]);
@@ -119,8 +108,7 @@ export default function CrewPage() {
   };
 
   const getRoleLabel = (role: string) => {
-    const roleObj = CONTACT_ROLES.find(r => r.value === role);
-    return roleObj?.label || role;
+    return role || 'N/A';
   };
 
   if (!selectedCustomer) {
@@ -309,7 +297,7 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
   const [formData, setFormData] = useState({
     phase_id: selectedPhase === 'NA' ? '' : selectedPhase,
     contact_name: '',
-    contact_role: 'designer',
+    contact_role: '',
     contact_phone: '',
     contact_email: '',
   });
@@ -325,12 +313,30 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
 
     try {
       setIsCreating(true);
-      await crewApi.create(formData.phase_id, {
-        contact_name: formData.contact_name,
-        contact_role: formData.contact_role,
-        contact_phone: formData.contact_phone || undefined,
-        contact_email: formData.contact_email || undefined,
-      });
+      
+      // If "All Phases" is selected, create crew member for each phase
+      if (formData.phase_id === 'ALL_PHASES') {
+        const crewData = {
+          contact_name: formData.contact_name,
+          contact_role: formData.contact_role,
+          contact_phone: formData.contact_phone || undefined,
+          contact_email: formData.contact_email || undefined,
+        };
+        
+        // Create crew member for each phase
+        for (const phase of phases) {
+          await crewApi.create(phase._id, crewData);
+        }
+      } else {
+        // Create for single phase
+        await crewApi.create(formData.phase_id, {
+          contact_name: formData.contact_name,
+          contact_role: formData.contact_role,
+          contact_phone: formData.contact_phone || undefined,
+          contact_email: formData.contact_email || undefined,
+        });
+      }
+      
       onCreated();
     } catch (error: any) {
       console.error('Failed to create crew member:', error);
@@ -359,6 +365,7 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Select Phase</option>
+                <option value="ALL_PHASES">All Phases</option>
                 {phases.map((phase: any) => (
                   <option key={phase._id} value={phase._id}>
                     {phase.name}
@@ -383,18 +390,17 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
             {/* Role */}
             <div>
               <label className="block text-sm font-medium mb-2">Role *</label>
-              <select
+              <input
+                type="text"
                 required
                 value={formData.contact_role}
                 onChange={(e) => setFormData({ ...formData, contact_role: e.target.value })}
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                {CONTACT_ROLES.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
+                placeholder="e.g., Designer, Travel Agent, Manufacturer"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Examples: Designer, Travel Agent, Visa Agent, Hotel, Manufacturer, Shipping Agent, Customs Agent
+              </p>
             </div>
 
             {/* Phone */}
