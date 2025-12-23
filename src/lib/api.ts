@@ -380,7 +380,6 @@ export const crewApi = {
   create: (phaseId: string, data: any) =>
     apiRequest<any>(`/phases/${phaseId}/crew`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
 
@@ -388,7 +387,6 @@ export const crewApi = {
   update: (id: string, data: any) =>
     apiRequest<any>(`/crew/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
 
