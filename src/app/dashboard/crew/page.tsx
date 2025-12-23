@@ -126,8 +126,12 @@ export default function CrewPage() {
     }
   };
 
-  const getRoleLabel = (role: string) => {
-    return role || 'N/A';
+  const getRoleLabel = (roles: string | string[]) => {
+    if (!roles) return 'N/A';
+    if (Array.isArray(roles)) {
+      return roles.join(', ');
+    }
+    return roles;
   };
 
   if (!selectedCustomer) {
@@ -254,9 +258,19 @@ export default function CrewPage() {
                       </div>
                       <div>
                         <h3 className="font-semibold">{member.contact_name}</h3>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                          {getRoleLabel(member.contact_role)}
-                        </span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Array.isArray(member.contact_role) && member.contact_role.length > 0 ? (
+                            member.contact_role.map((role: string, idx: number) => (
+                              <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                {role}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                              {typeof member.contact_role === 'string' ? member.contact_role : 'N/A'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -355,11 +369,23 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
     try {
       setIsCreating(true);
       
+      // Convert comma-separated roles to array
+      const rolesArray = formData.contact_role
+        .split(',')
+        .map(role => role.trim())
+        .filter(Boolean);
+      
+      if (rolesArray.length === 0) {
+        alert('Please enter at least one role');
+        setIsCreating(false);
+        return;
+      }
+      
       // If "All Phases" is selected, create crew member for each phase
       if (formData.phase_id === 'ALL_PHASES') {
         const crewData = {
           contact_name: formData.contact_name,
-          contact_role: formData.contact_role,
+          contact_role: rolesArray,
           contact_phone: formData.contact_phone || undefined,
           contact_email: formData.contact_email || undefined,
         };
@@ -372,7 +398,7 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
         // Create for single phase
         await crewApi.create(formData.phase_id, {
           contact_name: formData.contact_name,
-          contact_role: formData.contact_role,
+          contact_role: rolesArray,
           contact_phone: formData.contact_phone || undefined,
           contact_email: formData.contact_email || undefined,
         });
@@ -430,15 +456,18 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
 
             {/* Role */}
             <div>
-              <label className="block text-sm font-medium mb-2">Role *</label>
+              <label className="block text-sm font-medium mb-2">Roles *</label>
               <input
                 type="text"
                 required
                 value={formData.contact_role}
                 onChange={(e) => setFormData({ ...formData, contact_role: e.target.value })}
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Enter role"
+                placeholder="Director, Manager, Coordinator"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Enter multiple roles separated by commas
+              </p>
             </div>
 
             {/* Phone */}
@@ -485,7 +514,7 @@ function CreateCrewModal({ phases, selectedPhase, onClose, onCreated }: any) {
 function EditCrewModal({ crew, phases, onClose, onUpdate }: any) {
   const [formData, setFormData] = useState({
     contact_name: crew.contact_name || '',
-    contact_role: crew.contact_role || '',
+    contact_role: Array.isArray(crew.contact_role) ? crew.contact_role.join(', ') : (crew.contact_role || ''),
     contact_phone: crew.contact_phone || '',
     contact_email: crew.contact_email || '',
   });
@@ -496,9 +525,22 @@ function EditCrewModal({ crew, phases, onClose, onUpdate }: any) {
 
     try {
       setIsUpdating(true);
+      
+      // Convert comma-separated roles to array
+      const rolesArray = formData.contact_role
+        .split(',')
+        .map(role => role.trim())
+        .filter(Boolean);
+      
+      if (rolesArray.length === 0) {
+        alert('Please enter at least one role');
+        setIsUpdating(false);
+        return;
+      }
+      
       await onUpdate(crew._id, {
         contact_name: formData.contact_name,
-        contact_role: formData.contact_role,
+        contact_role: rolesArray,
         contact_phone: formData.contact_phone || undefined,
         contact_email: formData.contact_email || undefined,
       });
@@ -539,15 +581,18 @@ function EditCrewModal({ crew, phases, onClose, onUpdate }: any) {
 
             {/* Role */}
             <div>
-              <label className="block text-sm font-medium mb-2">Role *</label>
+              <label className="block text-sm font-medium mb-2">Roles *</label>
               <input
                 type="text"
                 required
                 value={formData.contact_role}
                 onChange={(e) => setFormData({ ...formData, contact_role: e.target.value })}
                 className="w-full px-3 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Enter role"
+                placeholder="Director, Manager, Coordinator"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Enter multiple roles separated by commas
+              </p>
             </div>
 
             {/* Phone */}
