@@ -582,7 +582,6 @@ function CreateTaskModal({ phaseId, onClose, onCreated }: any) {
     status: 'pending',
     required: true, 
     payment_status: 'not_required',
-    due_date: '',
     estimated_start_date: '',
     estimated_complete_date: '',
     actual_start_date: '',
@@ -603,7 +602,6 @@ function CreateTaskModal({ phaseId, onClose, onCreated }: any) {
       };
       
       // Only add dates if they're filled
-      if (formData.due_date) payload.due_date = formData.due_date;
       if (formData.estimated_start_date) payload.estimated_start_date = formData.estimated_start_date;
       if (formData.estimated_complete_date) payload.estimated_complete_date = formData.estimated_complete_date;
       if (formData.actual_start_date) payload.actual_start_date = formData.actual_start_date;
@@ -674,12 +672,7 @@ function CreateTaskModal({ phaseId, onClose, onCreated }: any) {
             </div>
 
             {/* Dates */}
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Due Date</label>
-                <input type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
-              </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Est. Start Date</label>
                 <input type="date" value={formData.estimated_start_date} onChange={(e) => setFormData({ ...formData, estimated_start_date: e.target.value })}
@@ -688,6 +681,16 @@ function CreateTaskModal({ phaseId, onClose, onCreated }: any) {
               <div>
                 <label className="block text-sm font-medium mb-1">Est. Complete Date</label>
                 <input type="date" value={formData.estimated_complete_date} onChange={(e) => setFormData({ ...formData, estimated_complete_date: e.target.value })}
+                  className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Actual Start Date</label>
+                <input type="date" value={formData.actual_start_date} onChange={(e) => setFormData({ ...formData, actual_start_date: e.target.value })}
+                  className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Actual Complete Date</label>
+                <input type="date" value={formData.actual_complete_date} onChange={(e) => setFormData({ ...formData, actual_complete_date: e.target.value })}
                   className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
               </div>
             </div>
@@ -733,7 +736,6 @@ function EditTaskModal({ task, onClose, onUpdated }: any) {
     status: task.status || 'pending',
     required: task.required !== undefined ? task.required : true, 
     payment_status: task.payment_status || 'not_required',
-    due_date: task.due_date ? task.due_date.split('T')[0] : '',
     estimated_start_date: task.estimated_start_date ? task.estimated_start_date.split('T')[0] : '',
     estimated_complete_date: task.estimated_complete_date ? task.estimated_complete_date.split('T')[0] : '',
     actual_start_date: task.actual_start_date ? task.actual_start_date.split('T')[0] : '',
@@ -753,7 +755,6 @@ function EditTaskModal({ task, onClose, onUpdated }: any) {
         payment_status: formData.payment_status,
       };
       
-      if (formData.due_date) payload.due_date = formData.due_date;
       if (formData.estimated_start_date) payload.estimated_start_date = formData.estimated_start_date;
       if (formData.estimated_complete_date) payload.estimated_complete_date = formData.estimated_complete_date;
       if (formData.actual_start_date) payload.actual_start_date = formData.actual_start_date;
@@ -815,24 +816,17 @@ function EditTaskModal({ task, onClose, onUpdated }: any) {
                 <option value="completed">Completed</option>
               </select>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Due Date</label>
-                <input type="date" value={formData.due_date} onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Est. Start</label>
+                <label className="block text-sm font-medium mb-1">Est. Start Date</label>
                 <input type="date" value={formData.estimated_start_date} onChange={(e) => setFormData({ ...formData, estimated_start_date: e.target.value })}
                   className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Est. Complete</label>
+                <label className="block text-sm font-medium mb-1">Est. Complete Date</label>
                 <input type="date" value={formData.estimated_complete_date} onChange={(e) => setFormData({ ...formData, estimated_complete_date: e.target.value })}
                   className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Actual Start Date</label>
                 <input type="date" value={formData.actual_start_date} onChange={(e) => setFormData({ ...formData, actual_start_date: e.target.value })}
@@ -867,34 +861,46 @@ function EditTaskModal({ task, onClose, onUpdated }: any) {
 
 function UploadModal({ projectId, phaseId, onClose, onUploaded }: any) {
   const [isUploading, setIsUploading] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [error, setError] = useState<string>('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [error, setError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
+    if (files.length === 0) return;
     
     try {
       setIsUploading(true);
       setError('');
+      setUploadProgress({ current: 0, total: files.length });
       
-      console.log('📤 [Upload] Starting upload...', { projectId, phaseId, fileName: file.name });
+      console.log(`📤 [Upload] Starting upload of ${files.length} file(s)...`);
       
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('project_id', projectId);
-      formData.append('phase_id', phaseId);
+      // Upload files sequentially
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress({ current: i + 1, total: files.length });
+        
+        console.log(`📤 [Upload] Uploading file ${i + 1}/${files.length}: ${file.name}`);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('project_id', projectId);
+        formData.append('phase_id', phaseId);
+        
+        await documentsApi.upload(formData);
+        console.log(`✅ [Upload] File ${i + 1}/${files.length} uploaded successfully`);
+      }
       
-      const response = await documentsApi.upload(formData);
-      console.log('✅ [Upload] Upload successful:', response);
-      
+      console.log('✅ [Upload] All files uploaded successfully');
       onUploaded(); // Trigger refresh
       onClose(); // Close modal
     } catch (e: any) { 
       console.error('❌ [Upload] Upload failed:', e);
       setError(e.message || 'Upload failed. Please try again.');
     } finally { 
-      setIsUploading(false); 
+      setIsUploading(false);
+      setUploadProgress({ current: 0, total: 0 });
     }
   };
 
@@ -905,26 +911,37 @@ function UploadModal({ projectId, phaseId, onClose, onUploaded }: any) {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">File *</label>
+              <label className="block text-sm font-medium mb-1">Files *</label>
               <input 
                 type="file" 
+                multiple
                 onChange={(e) => {
-                  const selectedFile = e.target.files?.[0] || null;
-                  setFile(selectedFile);
-                  console.log('📄 [Upload] File selected:', selectedFile?.name);
+                  const selectedFiles = Array.from(e.target.files || []);
+                  setFiles(selectedFiles);
+                  console.log(`📄 [Upload] ${selectedFiles.length} file(s) selected:`, selectedFiles.map(f => f.name));
                 }} 
                 className="w-full" 
               />
+              {files.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {files.length} file(s) selected
+                </p>
+              )}
             </div>
             {error && (
               <div className="p-3 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-lg text-sm">
                 {error}
               </div>
             )}
+            {isUploading && uploadProgress.total > 0 && (
+              <div className="p-3 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-lg text-sm">
+                Uploading file {uploadProgress.current} of {uploadProgress.total}...
+              </div>
+            )}
             <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-              <Button type="submit" disabled={isUploading || !file}>
-                {isUploading ? 'Uploading...' : 'Upload'}
+              <Button type="button" variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
+              <Button type="submit" disabled={isUploading || files.length === 0}>
+                {isUploading ? `Uploading... (${uploadProgress.current}/${uploadProgress.total})` : `Upload ${files.length > 0 ? `(${files.length})` : ''}`}
               </Button>
             </div>
           </form>

@@ -233,24 +233,44 @@ export default function DocumentsPage() {
 
 function UploadModal({ projects, allPhases, onClose, onUploaded }: any) {
   const [isUploading, setIsUploading] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [projectId, setProjectId] = useState('');
   const [phaseId, setPhaseId] = useState('');
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [error, setError] = useState('');
 
   const projectPhases = allPhases.filter((p: any) => p.projectId === projectId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !projectId || !phaseId) return;
+    if (files.length === 0 || !projectId || !phaseId) return;
+    
     try {
       setIsUploading(true);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('project_id', projectId);
-      formData.append('phase_id', phaseId);
-      await documentsApi.upload(formData);
+      setError('');
+      setUploadProgress({ current: 0, total: files.length });
+      
+      // Upload files sequentially
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress({ current: i + 1, total: files.length });
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('project_id', projectId);
+        formData.append('phase_id', phaseId);
+        
+        await documentsApi.upload(formData);
+      }
+      
       onUploaded();
-    } catch (e) { console.error(e); } finally { setIsUploading(false); }
+    } catch (e: any) { 
+      console.error(e);
+      setError(e.message || 'Upload failed. Please try again.');
+    } finally { 
+      setIsUploading(false);
+      setUploadProgress({ current: 0, total: 0 });
+    }
   };
 
   return (
@@ -281,14 +301,34 @@ function UploadModal({ projects, allPhases, onClose, onUploaded }: any) {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">File *</label>
-              <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full" />
+              <label className="block text-sm font-medium mb-1">Files *</label>
+              <input 
+                type="file" 
+                multiple
+                onChange={(e) => setFiles(Array.from(e.target.files || []))} 
+                className="w-full" 
+              />
+              {files.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {files.length} file(s) selected
+                </p>
+              )}
             </div>
             
+            {error && (
+              <div className="p-3 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            {isUploading && uploadProgress.total > 0 && (
+              <div className="p-3 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-lg text-sm">
+                Uploading file {uploadProgress.current} of {uploadProgress.total}...
+              </div>
+            )}
             <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-              <Button type="submit" disabled={isUploading || !file || !projectId || !phaseId}>
-                {isUploading ? 'Uploading...' : 'Upload'}
+              <Button type="button" variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
+              <Button type="submit" disabled={isUploading || files.length === 0 || !projectId || !phaseId}>
+                {isUploading ? `Uploading... (${uploadProgress.current}/${uploadProgress.total})` : `Upload ${files.length > 0 ? `(${files.length})` : ''}`}
               </Button>
             </div>
           </form>
