@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/ui';
-import { 
-  ArrowLeft, ChevronDown, ChevronRight, Plus, Trash2, 
+import {
+  ArrowLeft, ChevronDown, ChevronRight, Plus, Trash2,
   CheckCircle, Clock, Upload, FileText, CalendarDays
 } from 'lucide-react';
 import { projectsApi, phasesApi, tasksApi, documentsApi, meetingsApi } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/utils';
 
 const PHASE_NAMES: Record<string, string> = {
   'onboarding': 'Onboarding',
@@ -49,7 +49,7 @@ export default function ProjectDetailPage() {
       setIsLoading(true);
       const response = await projectsApi.getById(projectId);
       setProject(response.data?.project);
-      
+
       const phasesResponse = await phasesApi.listByProject(projectId);
       const projectPhases = phasesResponse.data?.phases || [];
       setPhases(projectPhases);
@@ -73,13 +73,13 @@ export default function ProjectDetailPage() {
       const docsResponse = await documentsApi.listByProject(projectId);
       const docs = docsResponse.data?.documents || [];
       console.log('📄 [Documents] Loaded documents:', docs);
-      
+
       const docsByPhase: Record<string, any[]> = {};
       docs.forEach((doc: any) => {
         // Handle both object and string phase_id
         const phaseId = doc.phase_id?._id || doc.phase_id || doc.metadata?.phase_id;
         console.log(`📄 [Documents] Document "${doc.file_name}" - phase_id:`, phaseId);
-        
+
         if (phaseId) {
           if (!docsByPhase[phaseId]) docsByPhase[phaseId] = [];
           docsByPhase[phaseId].push(doc);
@@ -156,15 +156,14 @@ export default function ProjectDetailPage() {
               <h1 className="text-2xl font-bold text-foreground">{project.project_type}</h1>
               <p className="text-muted-foreground mt-1">{project.project_description}</p>
             </div>
-            <span className={`px-3 py-1 rounded-full text-sm ${
-              project.status === 'active'
+            <span className={`px-3 py-1 rounded-full text-sm ${project.status === 'active'
                 ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300'
                 : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-            }`}>
+              }`}>
               {project.status}
             </span>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             {project.location && (
               <div>
@@ -251,7 +250,7 @@ function PhaseAccordion({ phase, index, isExpanded, onToggle, tasks, documents, 
   const handleStatusChange = async (newStatus: string) => {
     try {
       setIsUpdating(true);
-      await phasesApi.update(phase._id, { 
+      await phasesApi.update(phase._id, {
         status: newStatus,
         is_completed: newStatus === 'completed'
       });
@@ -342,24 +341,24 @@ function PhaseAccordion({ phase, index, isExpanded, onToggle, tasks, documents, 
           </div>
 
           {showTaskModal && (
-            <CreateTaskModal 
-              phaseId={phase._id} 
-              onClose={() => setShowTaskModal(false)} 
-              onCreated={() => { 
+            <CreateTaskModal
+              phaseId={phase._id}
+              onClose={() => setShowTaskModal(false)}
+              onCreated={() => {
                 onRefreshPhase(phase._id); // Force reload tasks for this phase
-                setShowTaskModal(false); 
-              }} 
+                setShowTaskModal(false);
+              }}
             />
           )}
           {showUploadModal && (
-            <UploadModal 
-              projectId={projectId} 
-              phaseId={phase._id} 
-              onClose={() => setShowUploadModal(false)} 
-              onUploaded={() => { 
+            <UploadModal
+              projectId={projectId}
+              phaseId={phase._id}
+              onClose={() => setShowUploadModal(false)}
+              onUploaded={() => {
                 onRefresh(); // Reload entire project to get new documents
-                setShowUploadModal(false); 
-              }} 
+                setShowUploadModal(false);
+              }}
             />
           )}
         </div>
@@ -409,7 +408,7 @@ function TaskRow({ task, onRefresh }: any) {
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       {/* Collapsed View - Clickable Header */}
-      <div 
+      <div
         className="flex items-center gap-3 p-3 cursor-pointer hover:bg-accent/50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -420,10 +419,10 @@ function TaskRow({ task, onRefresh }: any) {
             <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
           )}
         </button>
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+            <span className={`font-medium ${task.status === 'completed' ? 'text-muted-foreground' : ''}`}>
               {task.name}
             </span>
             <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeColor(task.type)}`}>
@@ -500,17 +499,17 @@ function TaskRow({ task, onRefresh }: any) {
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
-            <Button 
-              size="sm" 
-              variant="outline" 
+            <Button
+              size="sm"
+              variant="outline"
               onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}
             >
               <FileText className="w-4 h-4 mr-1" />
               Edit
             </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
+            <Button
+              size="sm"
+              variant="outline"
               onClick={(e) => { e.stopPropagation(); handleDelete(); }}
               className="text-destructive hover:text-destructive"
             >
@@ -523,7 +522,7 @@ function TaskRow({ task, onRefresh }: any) {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <EditTaskModal 
+        <EditTaskModal
           task={task}
           onClose={() => setShowEditModal(false)}
           onUpdated={() => {
@@ -542,13 +541,13 @@ function DocumentRow({ document, onRefresh }: any) {
       // Get the S3 presigned URL using the API (which handles auth properly)
       const res = await documentsApi.getDownloadUrl(document._id);
       const url = res.data?.url;
-      
+
       if (url) {
         // Open the S3 URL - it will download with whatever filename S3 provides
         window.open(url, '_blank');
       }
-    } catch (e) { 
-      console.error('Failed to download document:', e); 
+    } catch (e) {
+      console.error('Failed to download document:', e);
     }
   };
 
@@ -576,11 +575,11 @@ function DocumentRow({ document, onRefresh }: any) {
 
 function CreateTaskModal({ phaseId, onClose, onCreated }: any) {
   const [isCreating, setIsCreating] = useState(false);
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    type: 'action', 
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'action',
     status: 'pending',
-    required: true, 
+    required: true,
     payment_status: 'not_required',
     estimated_start_date: '',
     estimated_complete_date: '',
@@ -600,21 +599,21 @@ function CreateTaskModal({ phaseId, onClose, onCreated }: any) {
         required: formData.required,
         payment_status: formData.payment_status,
       };
-      
+
       // Only add dates if they're filled
       if (formData.estimated_start_date) payload.estimated_start_date = formData.estimated_start_date;
       if (formData.estimated_complete_date) payload.estimated_complete_date = formData.estimated_complete_date;
       if (formData.actual_start_date) payload.actual_start_date = formData.actual_start_date;
       if (formData.actual_complete_date) payload.actual_complete_date = formData.actual_complete_date;
       if (formData.data) payload.data = formData.data;
-      
+
       await tasksApi.create(phaseId, payload);
       onCreated(); // Refresh data first
       onClose(); // Then close modal
-    } catch (e) { 
-      console.error('Failed to create task:', e); 
-    } finally { 
-      setIsCreating(false); 
+    } catch (e) {
+      console.error('Failed to create task:', e);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -628,7 +627,7 @@ function CreateTaskModal({ phaseId, onClose, onCreated }: any) {
             <div>
               <label className="block text-sm font-medium mb-1">Task Name *</label>
               <input required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full h-10 px-3 rounded-lg border border-input bg-background" 
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background"
                 placeholder="e.g., Upload passport copy" />
             </div>
 
@@ -706,12 +705,12 @@ function CreateTaskModal({ phaseId, onClose, onCreated }: any) {
 
             {/* Required Checkbox */}
             <div className="flex items-center gap-2">
-              <input 
-                type="checkbox" 
-                id="required" 
-                checked={formData.required} 
+              <input
+                type="checkbox"
+                id="required"
+                checked={formData.required}
                 onChange={(e) => setFormData({ ...formData, required: e.target.checked })}
-                className="w-4 h-4" 
+                className="w-4 h-4"
               />
               <label htmlFor="required" className="text-sm font-medium">Required task</label>
             </div>
@@ -730,11 +729,11 @@ function CreateTaskModal({ phaseId, onClose, onCreated }: any) {
 
 function EditTaskModal({ task, onClose, onUpdated }: any) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [formData, setFormData] = useState({ 
-    name: task.name || '', 
-    type: task.type || 'action', 
+  const [formData, setFormData] = useState({
+    name: task.name || '',
+    type: task.type || 'action',
     status: task.status || 'pending',
-    required: task.required !== undefined ? task.required : true, 
+    required: task.required !== undefined ? task.required : true,
     payment_status: task.payment_status || 'not_required',
     estimated_start_date: task.estimated_start_date ? task.estimated_start_date.split('T')[0] : '',
     estimated_complete_date: task.estimated_complete_date ? task.estimated_complete_date.split('T')[0] : '',
@@ -754,19 +753,19 @@ function EditTaskModal({ task, onClose, onUpdated }: any) {
         required: formData.required,
         payment_status: formData.payment_status,
       };
-      
+
       if (formData.estimated_start_date) payload.estimated_start_date = formData.estimated_start_date;
       if (formData.estimated_complete_date) payload.estimated_complete_date = formData.estimated_complete_date;
       if (formData.actual_start_date) payload.actual_start_date = formData.actual_start_date;
       if (formData.actual_complete_date) payload.actual_complete_date = formData.actual_complete_date;
       if (formData.data) payload.data = formData.data;
-      
+
       await tasksApi.update(task._id, payload);
       onUpdated();
-    } catch (e) { 
-      console.error('Failed to update task:', e); 
-    } finally { 
-      setIsUpdating(false); 
+    } catch (e) {
+      console.error('Failed to update task:', e);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -844,7 +843,7 @@ function EditTaskModal({ task, onClose, onUpdated }: any) {
                 rows={3} className="w-full px-3 py-2 rounded-lg border border-input bg-background resize-none" />
             </div>
             <div className="flex items-center gap-2">
-              <input type="checkbox" id="required-edit" checked={formData.required} 
+              <input type="checkbox" id="required-edit" checked={formData.required}
                 onChange={(e) => setFormData({ ...formData, required: e.target.checked })} className="w-4 h-4" />
               <label htmlFor="required-edit" className="text-sm font-medium">Required task</label>
             </div>
@@ -868,37 +867,37 @@ function UploadModal({ projectId, phaseId, onClose, onUploaded }: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0) return;
-    
+
     try {
       setIsUploading(true);
       setError('');
       setUploadProgress({ current: 0, total: files.length });
-      
+
       console.log(`📤 [Upload] Starting upload of ${files.length} file(s)...`);
-      
+
       // Upload files sequentially
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setUploadProgress({ current: i + 1, total: files.length });
-        
+
         console.log(`📤 [Upload] Uploading file ${i + 1}/${files.length}: ${file.name}`);
-        
+
         const formData = new FormData();
         formData.append('file', file);
         formData.append('project_id', projectId);
         formData.append('phase_id', phaseId);
-        
+
         await documentsApi.upload(formData);
         console.log(`✅ [Upload] File ${i + 1}/${files.length} uploaded successfully`);
       }
-      
+
       console.log('✅ [Upload] All files uploaded successfully');
       onUploaded(); // Trigger refresh
       onClose(); // Close modal
-    } catch (e: any) { 
+    } catch (e: any) {
       console.error('❌ [Upload] Upload failed:', e);
       setError(e.message || 'Upload failed. Please try again.');
-    } finally { 
+    } finally {
       setIsUploading(false);
       setUploadProgress({ current: 0, total: 0 });
     }
@@ -912,15 +911,15 @@ function UploadModal({ projectId, phaseId, onClose, onUploaded }: any) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Files *</label>
-              <input 
-                type="file" 
+              <input
+                type="file"
                 multiple
                 onChange={(e) => {
                   const selectedFiles = Array.from(e.target.files || []);
                   setFiles(selectedFiles);
                   console.log(`📄 [Upload] ${selectedFiles.length} file(s) selected:`, selectedFiles.map(f => f.name));
-                }} 
-                className="w-full" 
+                }}
+                className="w-full"
               />
               {files.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -976,24 +975,24 @@ function MeetingCard({ meeting, onRefresh }: any) {
                 </span>
               )}
             </div>
-            
+
             <div className="text-sm text-muted-foreground mb-2">
-              📅 {formatDate(meeting.meeting_date || meeting.scheduled_at)}
+              📅 {formatDateTime(meeting.meeting_date || meeting.scheduled_at)}
             </div>
-            
+
             {meeting.summary && (
               <div className="text-sm mb-2">
                 <strong>Summary:</strong> {meeting.summary}
               </div>
             )}
-            
+
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-sm text-primary hover:underline"
             >
               {isExpanded ? 'Hide details' : 'Show details'}
             </button>
-            
+
             {isExpanded && (
               <div className="mt-3 space-y-3">
                 {meeting.attendees?.length > 0 && (
@@ -1008,7 +1007,7 @@ function MeetingCard({ meeting, onRefresh }: any) {
                     </div>
                   </div>
                 )}
-                
+
                 {meeting.action_items?.length > 0 && (
                   <div>
                     <p className="text-sm font-medium mb-1">Action Items:</p>
@@ -1020,7 +1019,7 @@ function MeetingCard({ meeting, onRefresh }: any) {
                           ) : (
                             <div className="w-4 h-4 rounded-full border-2 border-gray-300 mt-0.5" />
                           )}
-                          <span className={item.completed ? 'line-through text-muted-foreground' : ''}>
+                          <span className={item.completed ? 'text-muted-foreground' : ''}>
                             {item.text}
                             {item.assignee && <span className="text-muted-foreground"> - {item.assignee}</span>}
                           </span>
@@ -1032,7 +1031,7 @@ function MeetingCard({ meeting, onRefresh }: any) {
               </div>
             )}
           </div>
-          
+
           <Button variant="ghost" size="sm" onClick={handleDelete}>
             <Trash2 className="w-4 h-4 text-destructive" />
           </Button>
@@ -1059,17 +1058,17 @@ function MeetingModal({ projectId, phases, onCreated }: any) {
     e.preventDefault();
     try {
       setIsCreating(true);
-      
+
       // Parse attendees
       const attendees = formData.attendees
         ? formData.attendees.split(',').map(name => ({ name: name.trim() }))
         : [];
-      
+
       // Parse action items
       const action_items = formData.action_items
         ? formData.action_items.split(',').map(text => ({ text: text.trim(), completed: false }))
         : [];
-      
+
       await meetingsApi.create({
         project_id: projectId,
         phase_id: formData.phase_id || undefined,
@@ -1081,7 +1080,7 @@ function MeetingModal({ projectId, phases, onCreated }: any) {
         attendees,
         action_items,
       });
-      
+
       setShowModal(false);
       setFormData({ title: '', description: '', summary: '', phase_id: '', meeting_date: '', attendees: '', action_items: '' });
       onCreated();
@@ -1106,7 +1105,7 @@ function MeetingModal({ projectId, phases, onCreated }: any) {
                     placeholder="Meeting title"
                     className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Phase</label>
@@ -1122,14 +1121,14 @@ function MeetingModal({ projectId, phases, onCreated }: any) {
                       className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium mb-1">Summary/Notes</label>
                   <textarea value={formData.summary} onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
                     rows={3} placeholder="Meeting summary and notes..."
                     className="w-full px-3 py-2 rounded-lg border border-input bg-background resize-none" />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium mb-1">Attendees</label>
                   <input value={formData.attendees} onChange={(e) => setFormData({ ...formData, attendees: e.target.value })}
@@ -1137,7 +1136,7 @@ function MeetingModal({ projectId, phases, onCreated }: any) {
                     className="w-full h-10 px-3 rounded-lg border border-input bg-background" />
                   <p className="text-xs text-muted-foreground mt-1">Enter names separated by commas</p>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium mb-1">Action Items</label>
                   <textarea value={formData.action_items} onChange={(e) => setFormData({ ...formData, action_items: e.target.value })}
@@ -1145,7 +1144,7 @@ function MeetingModal({ projectId, phases, onCreated }: any) {
                     className="w-full px-3 py-2 rounded-lg border border-input bg-background resize-none" />
                   <p className="text-xs text-muted-foreground mt-1">Enter action items separated by commas</p>
                 </div>
-                
+
                 <div className="flex justify-end gap-3">
                   <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
                   <Button type="submit" disabled={isCreating}>

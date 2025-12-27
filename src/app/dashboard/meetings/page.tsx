@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/u
 import { CalendarDays, Plus, Trash2, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useCustomer } from '@/context';
 import { projectsApi, meetingsApi, phasesApi } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/utils';
 
 const PHASE_NAMES: Record<string, string> = {
   'onboarding': 'Onboarding',
@@ -205,7 +205,7 @@ function MeetingCard({ meeting, onDelete }: any) {
             </div>
             
             <div className="text-sm text-muted-foreground mb-2">
-              📅 {formatDate(meeting.meeting_date || meeting.scheduled_at)}
+              📅 {formatDateTime(meeting.meeting_date || meeting.scheduled_at)}
             </div>
             
             {meeting.summary && (
@@ -253,7 +253,7 @@ function MeetingCard({ meeting, onDelete }: any) {
                             <div className="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0" />
                           )}
                           <div className="flex-1">
-                            <span className={item.completed ? 'line-through text-muted-foreground' : ''}>
+                            <span className={item.completed ? 'text-muted-foreground' : ''}>
                               {item.text}
                             </span>
                             {item.assignee && (
